@@ -231,7 +231,7 @@ contains
     real(kind=rp) :: delta_t, t
     real(kind=rp) :: sample_start_time, sample_time
     character(len=LOG_SIZE) :: log_buf
-    integer :: ierr
+    integer :: ierr, flag
 
     if (time%start_time .gt. this%start_time) then
        write(log_buf, '(A)') 'Simulation start time is later than the ' &
@@ -249,29 +249,40 @@ contains
     end if
 
     t = time%t
+    flag = 0
 
     if (t .ge. this%start_time) then
-       delta_t = t - this%time !This is only a real number
+       if (flag == 1) then 
+          return
+       else
+          ! Check if it is the last time
+          if (t + time%dt .ge. time%end_time ) then 
+               flag = 1
+          end if
+          ! Time increment since last stats update
+          delta_t = t - this%time !This is only a real number
 
-       call MPI_Barrier(NEKO_COMM, ierr)
+          call MPI_Barrier(NEKO_COMM, ierr)
 
-       sample_start_time = MPI_WTIME()
+          sample_start_time = MPI_WTIME()
 
-       call this%stats%update(delta_t)
-       call MPI_Barrier(NEKO_COMM, ierr)
-       this%time = t
+          ! Regular update of stats for this step   
+          call this%stats%update(delta_t)
+          call MPI_Barrier(NEKO_COMM, ierr)
+          this%time = t
 
-       sample_time = MPI_WTIME() - sample_start_time
+          sample_time = MPI_WTIME() - sample_start_time
 
-       call neko_log%section('Scalar stats')
-       write(log_buf, '(A,E15.7)') 'Sampling at time:', t
-       call neko_log%message(log_buf)
-       write(log_buf, '(A33,E15.7)') 'Simulationtime since last sample:', &
-            delta_t
-       call neko_log%message(log_buf)
-       write(log_buf, '(A,E15.7)') 'Sampling time (s):', sample_time
-       call neko_log%message(log_buf)
-       call neko_log%end_section()
+          call neko_log%section('Scalar stats')
+          write(log_buf, '(A,E15.7)') 'Sampling at time:', t
+          call neko_log%message(log_buf)
+          write(log_buf, '(A33,E15.7)') 'Simulationtime since last sample:', &
+               delta_t
+          call neko_log%message(log_buf)
+          write(log_buf, '(A,E15.7)') 'Sampling time (s):', sample_time
+          call neko_log%message(log_buf)
+          call neko_log%end_section()
+       end if
     end if
 
   end subroutine scalar_stats_simcomp_compute
