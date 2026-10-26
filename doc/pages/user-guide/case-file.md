@@ -1382,7 +1382,7 @@ source term added to the right-hand side is \f$ + w_{sub}\, \partial \phi /
       w_{sub}(z) &=& w_{max}, \qquad \qquad z > z_{max}
    \f}
 
-A **positive** `div_rate` or `w_sub_max` therefore means downward motion
+A **positive** `div_rate` or `w_sub_max` therefore means **downward** motion
 (subsidence), following the meteorological convention.
 
 The parameters of the subsidence source term are:
