@@ -935,12 +935,15 @@ define both `coriolis` and `centrifugal` source terms in a consistent way.
     relative one. It is simply advection that is affected. Useful to perform
     simulations on domains that are moving on a periodic direction.
 
-12. `subsidence`, a source term that models large-scale vertical atmospheric subsidence 
-    by adding a vertical advection contribution to the horizontal velocity components, 
-    defined as \f$ - w_{sub}(z) \frac{\partial u_i}{\partial z} \f$ for \f$ u_i = [u, v] \f$. 
-    The vertical velocity profile \f$ w_{sub}(z) \f$ can be defined analytically or 
-    retrieved from the field registry. It assumes that the \f$ z \f$ axis is normal 
-    to the ground.
+12. `subsidence`, a source term that models large-scale vertical atmospheric
+    subsidence by adding a vertical advection contribution with a prescribed
+    vertical velocity \f$ w(z) \f$, defined as
+    \f$ - w(z) \frac{\partial \phi}{\partial z} \f$. In the fluid
+    `source_terms` it acts on the horizontal velocity components
+    \f$ \phi = u, v \f$; in the `source_terms` of a scalar it acts on that
+    scalar (e.g. temperature). The profile can be defined analytically or
+    retrieved from the field registry. It assumes that the \f$ z \f$ axis is
+    normal to the ground.
 
 #### Brinkman
 The Brinkman source term introduces regions of resistance in the fluid domain.
@@ -1333,93 +1336,140 @@ The parameters for the sponge source term are summarized in the table below:
 
 
 #### Subsidence
-The subsidence source term introduces large-scale downward (or upward) vertical advection effects on the horizontal velocity components without explicitly resolving the large-scale vertical velocity field in the continuity equation. This is a common setup in idealized atmospheric boundary layer simulations.
-
-The volume force applied to the horizontal components \f$ u \f$ and \f$ v \f$ is defined as:
+The subsidence source term models large-scale vertical motion (typically
+subsidence) in idealized atmospheric boundary layer simulations. The large-scale
+vertical velocity is not resolved and does not enter the continuity equation.
+Instead, it is prescribed and its advective effect is added as a source term:
 
 \f[
-   f_i(x) = - w_{sub}(z) \frac{\partial u_i}{\partial z}, \quad \text{for } u_i \in \{u, v\}
+   f = - w(z) \frac{\partial \phi}{\partial z}
 \f]
 
-where \f$ z \f$ is the vertical height coordinate, and \f$ w_{sub}(z) \f$ is the profile velocity. The profile field is saved into the `neko_registry` under the handle specified by `profile_registry_name`.
+where \f$ z \f$ is the vertical coordinate and \f$ w(z) \f$ is the prescribed
+vertical velocity. The term can be used in two places:
 
-The configuration of the vertical velocity profile \f$ w_{sub}(z) \f$ is determined by the `method` keyword. The following options are available:
+- In the fluid `source_terms`, where it acts on the horizontal velocity
+  components, \f$ \phi \in \{u, v\} \f$.
+- In the `source_terms` of a scalar, where it acts on that scalar. This is the
+  main effect in a convective boundary layer: subsidence brings warm air down
+  and sharpens the capping inversion. Add it to the temperature (and, if
+  wanted, other scalars) separately.
 
-1. `user`, the profile field is not calculated analytically by the module. Instead, Neko searches the `neko_registry` for an existing field matching the `profile_registry_name`. This allows users to prescribe arbitrary complex profiles directly from their case file (`case.f90`).
-2. `linear`, the vertical velocity varies linearly with height based on a constant large-scale horizontal divergence rate \f$ D \f$:
+@note The momentum term only has an effect where there is vertical shear. In a
+well-mixed boundary layer with a uniform geostrophic wind, \f$ \partial u /
+\partial z \approx 0\f$, so changing the subsidence strength will barely change
+the velocity. Look at the scalar for a clear effect.
+
+The profile is stored in the `neko_registry` under the name given by
+`profile_registry_name`. The `method` keyword selects how it is built. In the
+formulas below, \f$ w_{sub} \f$ is the stored field and is positive for
+downward motion, i.e. the vertical velocity is \f$ w = -w_{sub} \f$ and the
+source term added to the right-hand side is \f$ + w_{sub}\, \partial \phi /
+\partial z \f$.
+
+1. `user`, the profile is not computed by Neko. Neko looks in the registry for
+   an existing field with the name `profile_registry_name`, which you must add
+   in your user file. This allows arbitrary profiles.
+2. `linear`, the downward velocity grows linearly with height from a constant
+   large-scale horizontal divergence rate \f$ D \f$:
    \f[
-      w_{sub}(z) = -D \cdot z
+      w_{sub}(z) = D \, z
    \f]
-3. `linear_constant`, the vertical velocity decreases linearly up to a capping inversion height \f$ z_{max} \f$, and remains completely constant at a maximum velocity \f$ w_{max} \f$ above it:
+3. `linear_constant`, the downward velocity grows linearly up to the height
+   \f$ z_{max} \f$ and stays constant at \f$ w_{max} \f$ above it:
    \f{eqnarray*}{
-      w_{sub}(z) &=& \frac{w_{max}}{z_{max}} \cdot z, \quad \text{for } z \le z_{max} \\
-      w_{sub}(z) &=& w_{max}, \qquad \quad \text{for } z > z_{max}
+      w_{sub}(z) &=& \frac{w_{max}}{z_{max}} \, z, \quad z \le z_{max} \\
+      w_{sub}(z) &=& w_{max}, \qquad \qquad z > z_{max}
    \f}
 
-Note that, when specifying the `div_rate` or `w_sub_max`, a **positive** value indicates a **negative** vertical velocity (proper subsidence), in accordance with meteorological conventions. Also, this implementation assumes that the vertical direction is $z$.
+A **positive** `div_rate` or `w_sub_max` therefore means downward motion
+(subsidence), following the meteorological convention.
 
+The parameters of the subsidence source term are:
 
-Additional keywords are available to configure the subsidence source term:
+| Name                    | Description                                                                                          | Admissible values                   | Default value |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------- |
+| `method`                | How the profile is built or retrieved.                                                               | `user`, `linear`, `linear_constant` | `user`        |
+| `profile_registry_name` | Name under which the \f$ w_{sub} \f$ field is registered or looked up in the registry.              | String                              | `"w_sub"`     |
+| `div_rate`              | Divergence rate \f$ D \f$ (only for `linear`).                                                      | Real                                | \f$ 10^{-5} \f$ |
+| `w_sub_max`             | Maximum subsidence velocity \f$ w_{max} \f$ (only for `linear_constant`).                           | Real                                | \f$ 10^{-5} \f$ |
+| `w_sub_max_height`      | Height \f$ z_{max} \f$ above which the velocity is constant (only for `linear_constant`).           | Real                                | \f$ 500.0 \f$ |
 
-| Name                    | Description                                                                                     | Admissible values            | Default value |
-| ----------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------- | ------------- |
-| `method`                | The method used to build or retrieve the profile field.                                         | `user`, `linear`, `linear_constant` | `user`        |
-| `profile_registry_name` | The name string used to register or locate the \f$ w_{sub} \f$ field inside the registry.       | String                       | `"w_sub"`     |
-| `div_rate`              | Large-scale horizontal divergence rate \f$ D \f$ (only used if `method` is `linear`).            | Real                         | \f$ +1.0 \times 10^{-5} \f$ |
-| `w_sub_max`             | Maximum vertical subsidence velocity \f$ w_{max} \f$ (only used if `method` is `linear_constant`).| Real                         | \f$ +1.0 \times 10^{-2} \f$ |
-| `w_sub_max_height`      | Height threshold \f$ z_{max} \f$ for constant velocity (only used if `method` is `linear_constant`).| Real                     | \f$ 500.0 \f$ |
+If `method` is left out it defaults to `user`, in which case `div_rate`,
+`w_sub_max` and `w_sub_max_height` are ignored.
 
-Example of a subsidence source term using the `linear_constant` profile to model a typical capping inversion scenario:
+If several subsidence source terms (for example one for the fluid and one for
+temperature) use an analytic method with the same `profile_registry_name`, they
+share one registered field and the last one to be evaluated sets its values. Use
+different names if they should have different parameters.
+
+Example, applying a `linear_constant` profile to both the momentum and the
+temperature:
 
 ```json
-"source_terms": [
+"fluid": {
+   "source_terms": [
+      {
+         "type": "subsidence",
+         "method": "linear_constant",
+         "w_sub_max": 0.005,
+         "w_sub_max_height": 600.0
+      }
+   ]
+},
+"scalars": [
    {
-      "type": "subsidence",
-      "start_time": 0.0,
-      "method": "linear_constant",
-      "profile_registry_name": "w_sub_profile",
-      "w_sub_max": 0.005,
-      "w_sub_max_height": 600.0
+      "name": "temperature",
+      "source_terms": [
+         {
+            "type": "subsidence",
+            "method": "linear_constant",
+            "w_sub_max": 0.005,
+            "w_sub_max_height": 600.0
+         }
+      ]
    }
 ]
 ```
 
-When `method` is set to `"user"`, the subsidence module completely delegates the creation and initialization of the profile field to the local compilation setup. This is ideal for assigning empirical observation data or custom localized functions. 
-
-To achieve this, one must fetch a reference velocity field (to match the structural degrees of freedom), add a custom handle name to the global `neko_registry` (or the default `w_sub`will be used), and populate the arrays within the `user_initialize` subroutine of your `user.f90` file. Example:
+With `method` set to `"user"`, the profile field is created in the user file,
+for instance in `user_initialize`. Create the field on the same dofmap as the
+velocity and fill it with \f$ w_{sub} \f$. Example:
 
 ```fortran
   subroutine user_initialize(t)
     use num_types, only : rp
     use time_state, only : time_state_t
     use field, only : field_t
-    use neko_registry, only : neko_registry
+    use registry, only : neko_registry
 
     implicit none
 
     type(time_state_t), intent(in) :: t
     type(field_t), pointer :: u, w_sub
     integer :: i
-    real(kind=rp) :: z
-    real(kind=rp) :: div_rate
+    real(kind=rp) :: z, div_rate
 
     u => neko_registry%get_field("u")
 
     call neko_registry%add_field(u%dof, "w_sub_custom")
     w_sub => neko_registry%get_field("w_sub_custom")
-    
-    ! positive div_rate = negative vertical velocity (subsidence)
-    div_rate = +2.0e-2_rp
+
+    ! positive div_rate = downward motion (subsidence)
+    div_rate = 1.0e-5_rp
 
     do i = 1, w_sub%size()
        z = w_sub%dof%z(i,1,1,1)
-       w_sub%x(i,1,1,1) = +div_rate * z
+       w_sub%x(i,1,1,1) = div_rate * z
     end do
 
   end subroutine user_initialize
 ```
 
-
+and select it in the case file with `"method": "user"` and
+`"profile_registry_name": "w_sub_custom"`. On device backends, copy the field
+to the device after filling it, e.g. with `call w_sub%copy_from(HOST_TO_DEVICE,
+.true.)`.
 
 ### Arbitrary Lagrangian-Eulerian Framework {#case-file_fluid-ale}
 Neko supports the simulation of moving walls through the Arbitrary Lagrangian-Eulerian (ALE) framework. The current implementation allows for an arbitrary number of individually moving or deformable walls, collectively referred to as bodies.
