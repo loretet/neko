@@ -2,7 +2,10 @@
 
 ## Develop
 
-- Added subsidence source term (ABL physics)
+- Added the `subsidence` source term for ABL simulations. It advects the
+  horizontal velocity components (fluid) and scalars such as temperature
+  (scalar `source_terms`) with a prescribed large-scale vertical velocity,
+  `-w_sub(z) d(phi)/dz`.
 - Removed restart limitations on load balancing. We now cache the the balanced
   mesh and read the cache if available. Load balance name pattern updated to
   include partition number.
