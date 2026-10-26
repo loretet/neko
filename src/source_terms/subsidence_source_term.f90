@@ -201,9 +201,11 @@ contains
           this%w_sub => neko_registry%get_field(trim(this%profile_registry_name))
        else
           if (associated(this%u)) then
-             call neko_registry%add_field(this%u%dof, trim(this%profile_registry_name))
+             call neko_registry%add_field(this%u%dof, &
+                  trim(this%profile_registry_name), ignore_existing = .true.)
           else
-             call neko_registry%add_field(this%scalar%dof, trim(this%profile_registry_name))
+             call neko_registry%add_field(this%scalar%dof, &
+                  trim(this%profile_registry_name), ignore_existing = .true.)
           end if
 
           this%w_sub => neko_registry%get_field(trim(this%profile_registry_name))
