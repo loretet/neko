@@ -71,7 +71,7 @@ contains
        fs => fields%get_by_index(1)
        n = fs%size()
 
-       call grad(dx%x, dy%x, dz%x, scalar%x, coef)
+       call grad(dx%x_d, dy%x_d, dz%x_d, scalar%x_d, coef)
 
        call coef%gs_h%op(dz, GS_OP_ADD)
        call device_col2(dz%x_d, coef%mult_d, n)
@@ -85,7 +85,7 @@ contains
        fv => fields%get_by_index(2)
        n = fu%size()
 
-       call grad(dx%x, dy%x, dz%x, u%x, coef)
+       call grad(dx%x_d, dy%x_d, dz%x_d, u%x_d, coef)
 
        call coef%gs_h%op(dz, GS_OP_ADD)
        call device_col2(dz%x_d, coef%mult_d, n)
@@ -98,7 +98,7 @@ contains
        call device_add2(fu%x_d, prod%x_d, n)
 
        ! Same for v.
-       call grad(dx%x, dy%x, dz%x, v%x, coef)
+       call grad(dx%x_d, dy%x_d, dz%x_d, v%x_d, coef)
 
        call coef%gs_h%op(dz, GS_OP_ADD)
        call device_col2(dz%x_d, coef%mult_d, n)
