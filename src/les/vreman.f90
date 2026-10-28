@@ -190,6 +190,9 @@ contains
     character(len=*), intent(in) :: nut_name
     character(len=*), intent(in) :: delta_type
     logical, intent(in) :: if_ext, if_corr
+    logical, intent(in), optional :: if_aniso
+    character(len=*), intent(in), optional :: alphat_name
+    real(kind=rp), intent(in), optional :: c_k
 
     call this%free()
 
@@ -200,6 +203,37 @@ contains
     this%ref_temp = ref_temp
     this%g = g
     this%scalar_name = scalar_name
+
+    this%if_aniso = .false.
+    if (present(if_aniso)) this%if_aniso = if_aniso
+    if (present(c_k)) this%c_k = c_k
+
+    if (this%if_aniso) then
+       call this%g11%init(this%coef%dof, "vreman_g11")
+       call this%g12%init(this%coef%dof, "vreman_g12")
+       call this%g13%init(this%coef%dof, "vreman_g13")
+       call this%g22%init(this%coef%dof, "vreman_g22")
+       call this%g23%init(this%coef%dof, "vreman_g23")
+       call this%g33%init(this%coef%dof, "vreman_g33")
+       call this%compute_delta_tensor(this%g11, this%g12, this%g13, &
+            this%g22, this%g23, this%g33)
+    end if
+
+    this%if_alphat = .false.
+    if (present(alphat_name)) then
+       if (len_trim(alphat_name) .gt. 0) then
+          this%if_alphat = .true.
+          call neko_registry%add_field(this%coef%dof, trim(alphat_name), &
+               .true.)
+          this%alphat => neko_registry%get_field(trim(alphat_name))
+       end if
+    end if
+
+    if ((this%if_corr .or. this%if_alphat) .and. &
+         sqrt(sum(this%g**2)) .le. 0.0_rp) then
+       call neko_error("VREMAN: The gravity vector must have at least " // &
+            "one nonzero component")
+    end if
 
   end subroutine vreman_init_from_components
 
