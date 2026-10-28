@@ -54,10 +54,24 @@ module vreman
   type, public, extends(les_model_t) :: vreman_t
      !> Model constant, defaults to 0.07.
      real(kind=rp) :: c
+     !> Critical Richardson number and reference temperature.
      real(kind=rp) :: ri_c, ref_temp
+     !> Gravity vector, pointing in the direction of gravity.
      real(kind=rp) :: g(3)
-     logical :: if_corr
+     !> Whether to apply the Richardson-number correction.
+     logical :: if_corr = .false.
+     !> Whether to use anisotropic filter widths.
+     logical :: if_aniso = .false.
+     !> Whether to compute the SGS eddy diffusivity of the scalar.
+     logical :: if_alphat = .false.
+     !> Deardorff constant used to diagnose the SGS mixing length.
+     real(kind=rp) :: c_k = 0.1_rp
+     !> Name of the scalar field used for the stability treatment.
      character(len=:), allocatable :: scalar_name
+     !> Filter-width tensor (only used if if_aniso).
+     type(field_t) :: g11, g12, g13, g22, g23, g33
+     !> SGS eddy diffusivity of the scalar (only used if if_alphat).
+     type(field_t), pointer :: alphat => null()
    contains
      !> Constructor from JSON.
      procedure, pass(this) :: init => vreman_init
@@ -80,11 +94,11 @@ contains
     type(json_file), intent(inout) :: json
     character(len=:), allocatable :: nut_name
 
-    real(kind=rp) :: c, ri_c, ref_temp
+    real(kind=rp) :: c, ri_c, ref_temp, c_k
     real(kind=rp), allocatable :: g(:)
-    character(len=:), allocatable :: scalar_name
+    character(len=:), allocatable :: scalar_name, alphat_name
     character(len=:), allocatable :: delta_type
-    logical :: if_ext, if_corr
+    logical :: if_ext, if_corr, if_aniso
     character(len=LOG_SIZE) :: log_buf
 
     call json_get_or_default(json, "nut_field", nut_name, "nut")
@@ -92,7 +106,18 @@ contains
     ! Based on the Smagorinsky Cs = 0.17.
     call json_get_or_lookup_or_default(json, "c", c, 0.07_rp)
     call json_get_or_default(json, "extrapolation", if_ext, .false.)
+    call json_get_or_default(json, "anisotropic", if_aniso, .false.)
     call json_get_or_default(json, "buoyancy_correction", if_corr, .false.)
+    call json_get_or_default(json, "alphat_field", alphat_name, "alphat")
+    call json_get_or_lookup_or_default(json, "c_k", c_k, 0.1_rp)
+
+    ri_c = 0.25_rp
+    if (if_corr) then
+       call json_get_or_lookup(json, "Ri_c", ri_c)
+       if (ri_c .le. 0.0_rp) then
+          call neko_error("The critical Richardson number should be positive.")
+       end if
+    end if
 
     if (if_corr) then
        call json_get(json, "scalar_field", scalar_name)
