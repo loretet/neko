@@ -152,8 +152,16 @@ contains
     call neko_log%message(log_buf)
     write(log_buf, '(A, L1)') 'extrapolation : ', if_ext
     call neko_log%message(log_buf)
+    write(log_buf, '(A, L1)') 'anisotropic : ', if_aniso
+    call neko_log%message(log_buf)
     write(log_buf, '(A, L1)') 'buoyancy correction : ', if_corr
     call neko_log%message(log_buf)
+    if (len_trim(alphat_name) .gt. 0) then
+       write(log_buf, '(A, A)') 'alphat field : ', trim(alphat_name)
+       call neko_log%message(log_buf)
+       write(log_buf, '(A, E15.7)') 'c_k : ', c_k
+       call neko_log%message(log_buf)
+    end if
     call neko_log%end_section()
 
     call vreman_init_from_components(this, fluid, c, nut_name, &
