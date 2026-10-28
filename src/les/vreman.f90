@@ -241,6 +241,13 @@ contains
   subroutine vreman_free(this)
     class(vreman_t), intent(inout) :: this
 
+    call this%g11%free()
+    call this%g12%free()
+    call this%g13%free()
+    call this%g22%free()
+    call this%g23%free()
+    call this%g33%free()
+    nullify(this%alphat)
     call this%free_base()
   end subroutine vreman_free
 
