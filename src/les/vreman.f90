@@ -62,16 +62,10 @@ module vreman
      logical :: if_corr = .false.
      !> Whether to use anisotropic filter widths.
      logical :: if_aniso = .false.
-     !> Whether to compute the SGS eddy diffusivity of the scalar.
-     logical :: if_alphat = .false.
-     !> Deardorff constant used to diagnose the SGS mixing length.
-     real(kind=rp) :: c_k = 0.1_rp
      !> Name of the scalar field used for the stability treatment.
      character(len=:), allocatable :: scalar_name
      !> Filter-width tensor (only used if if_aniso).
      type(field_t) :: g11, g12, g13, g22, g23, g33
-     !> SGS eddy diffusivity of the scalar (only used if if_alphat).
-     type(field_t), pointer :: alphat => null()
    contains
      !> Constructor from JSON.
      procedure, pass(this) :: init => vreman_init
@@ -94,9 +88,9 @@ contains
     type(json_file), intent(inout) :: json
     character(len=:), allocatable :: nut_name
 
-    real(kind=rp) :: c, ri_c, ref_temp, c_k
+    real(kind=rp) :: c, ri_c, ref_temp
     real(kind=rp), allocatable :: g(:)
-    character(len=:), allocatable :: scalar_name, alphat_name
+    character(len=:), allocatable :: scalar_name
     character(len=:), allocatable :: delta_type
     logical :: if_ext, if_corr, if_aniso
     character(len=LOG_SIZE) :: log_buf
@@ -108,8 +102,6 @@ contains
     call json_get_or_default(json, "extrapolation", if_ext, .false.)
     call json_get_or_default(json, "anisotropic", if_aniso, .false.)
     call json_get_or_default(json, "buoyancy_correction", if_corr, .false.)
-    call json_get_or_default(json, "alphat_field", alphat_name, "alphat")
-    call json_get_or_lookup_or_default(json, "c_k", c_k, 0.1_rp)
 
     ri_c = 0.25_rp
     if (if_corr) then
@@ -121,24 +113,17 @@ contains
 
     if (if_corr) then
        call json_get(json, "scalar_field", scalar_name)
-       call json_get_or_lookup(json, "Ri_c", ri_c)
        call json_get_or_lookup(json, "reference_temperature", ref_temp)
        call json_get_or_lookup(json, "g", g)
        if (.not. size(g) == 3) then
           call neko_error("VREMAN: The gravity vector should have 3 components")
        end if
-
-       if (ri_c .le. 0.0_rp) then
-          call neko_error("The critical Richardson number should be positive.")
-       end if
-
        if (ref_temp .le. 0.0_rp) then
           call neko_error("The reference temperature should be positive.")
        end if
     else
        ! These values are not used
        g = [0.0_rp, 0.0_rp, 0.0_rp]
-       ri_c = 0.0_rp
        ref_temp = 0.0_rp
        scalar_name = ""
     end if
@@ -156,12 +141,6 @@ contains
     call neko_log%message(log_buf)
     write(log_buf, '(A, L1)') 'buoyancy correction : ', if_corr
     call neko_log%message(log_buf)
-    if (len_trim(alphat_name) .gt. 0) then
-       write(log_buf, '(A, A)') 'alphat field : ', trim(alphat_name)
-       call neko_log%message(log_buf)
-       write(log_buf, '(A, E15.7)') 'c_k : ', c_k
-       call neko_log%message(log_buf)
-    end if
     call neko_log%end_section()
 
     call vreman_init_from_components(this, fluid, c, nut_name, &
@@ -177,7 +156,8 @@ contains
   !! @param delta_type The type of filter size.
   !! @param if_ext Whether to extrapolate the velocity.
   !! @param if_corr Whether to apply buoyancy correction.
-  !! @param scalar_name The name of the scalar field for buoyancy correction.
+  !! @param scalar_name The name of the scalar field for the stability
+  !! treatment.
   !! @param ri_c Critical Richardson number.
   !! @param ref_temp Reference temperature for Richardson number.
   !! @param g The gravity vector, pointing in the direction of gravity.
@@ -194,8 +174,6 @@ contains
     character(len=*), intent(in) :: delta_type
     logical, intent(in) :: if_ext, if_corr
     logical, intent(in), optional :: if_aniso
-    character(len=*), intent(in), optional :: alphat_name
-    real(kind=rp), intent(in), optional :: c_k
 
     call this%free()
 
@@ -211,7 +189,6 @@ contains
 
     this%if_aniso = .false.
     if (present(if_aniso)) this%if_aniso = if_aniso
-    if (present(c_k)) this%c_k = c_k
 
     if (this%if_aniso) then
        call this%g11%init(this%coef%dof, "vreman_g11")
@@ -242,7 +219,6 @@ contains
     call this%g22%free()
     call this%g23%free()
     call this%g33%free()
-    nullify(this%alphat)
     call this%free_base()
   end subroutine vreman_free
 
@@ -278,11 +254,15 @@ contains
     if (NEKO_BCKND_DEVICE .eq. 1) then
        call vreman_compute_device(this%if_ext, t, tstep, this%coef, &
             this%nut, this%delta, this%c, this%if_corr, &
-            this%scalar_name, this%ri_c, this%ref_temp, this%g)
+            this%scalar_name, this%ri_c, this%ref_temp, this%g, &
+            this%if_aniso, this%g11, this%g12, this%g13, &
+            this%g22, this%g23, this%g33)
     else
        call vreman_compute_cpu(this%if_ext, t, tstep, this%coef, &
             this%nut, this%delta, this%c, this%if_corr, &
-            this%scalar_name, this%ri_c, this%ref_temp, this%g)
+            this%scalar_name, this%ri_c, this%ref_temp, this%g, &
+            this%if_aniso, this%g11, this%g12, this%g13, &
+            this%g22, this%g23, this%g33)
     end if
 
   end subroutine vreman_compute
