@@ -56,7 +56,7 @@ module vreman
      real(kind=rp) :: c
      !> Critical Richardson number and reference temperature.
      real(kind=rp) :: ri_c, ref_temp
-     !> Gravity vector, pointing in the direction of gravity.
+     !> Gravity vector
      real(kind=rp) :: g(3)
      !> Whether to apply the Richardson-number correction.
      logical :: if_corr = .false.
@@ -165,7 +165,8 @@ contains
     call neko_log%end_section()
 
     call vreman_init_from_components(this, fluid, c, nut_name, &
-         delta_type, if_ext, if_corr, scalar_name, ri_c, ref_temp, g)
+         delta_type, if_ext, if_corr, scalar_name, ri_c, ref_temp, g, &
+         if_aniso)
 
   end subroutine vreman_init
 
@@ -179,9 +180,11 @@ contains
   !! @param scalar_name The name of the scalar field for buoyancy correction.
   !! @param ri_c Critical Richardson number.
   !! @param ref_temp Reference temperature for Richardson number.
-  !! @param g The gravity vector.
+  !! @param g The gravity vector, pointing in the direction of gravity.
+  !! @param if_aniso Whether to use anisotropic filter widths.
   subroutine vreman_init_from_components(this, fluid, c, nut_name, &
-       delta_type, if_ext, if_corr, scalar_name, ri_c, ref_temp, g)
+       delta_type, if_ext, if_corr, scalar_name, ri_c, ref_temp, g, &
+       if_aniso)
     class(vreman_t), intent(inout) :: this
     class(fluid_scheme_base_t), intent(inout), target :: fluid
     real(kind=rp) :: c, ri_c, ref_temp
@@ -201,7 +204,9 @@ contains
     this%if_corr = if_corr
     this%ri_c = ri_c
     this%ref_temp = ref_temp
-    this%g = g
+    ! Reversed so that g points upwards inside the model, as in the
+    ! Deardorff model; the case file gives g in the direction of gravity.
+    this%g = -g
     this%scalar_name = scalar_name
 
     this%if_aniso = .false.
@@ -219,17 +224,7 @@ contains
             this%g22, this%g23, this%g33)
     end if
 
-    this%if_alphat = .false.
-    if (present(alphat_name)) then
-       if (len_trim(alphat_name) .gt. 0) then
-          this%if_alphat = .true.
-          call neko_registry%add_field(this%coef%dof, trim(alphat_name), &
-               .true.)
-          this%alphat => neko_registry%get_field(trim(alphat_name))
-       end if
-    end if
-
-    if ((this%if_corr .or. this%if_alphat) .and. &
+    if (this%if_corr .and. &
          sqrt(sum(this%g**2)) .le. 0.0_rp) then
        call neko_error("VREMAN: The gravity vector must have at least " // &
             "one nonzero component")
