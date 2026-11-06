@@ -40,56 +40,88 @@ module wall_model_device
 
 #ifdef HAVE_HIP
   interface
-     subroutine hip_wall_model_compute_mag_field(tau_x_d, tau_y_d, tau_z_d, &
+     subroutine hip_wall_model_compute_magtau_field(tau_x_d, tau_y_d, tau_z_d, &
           tau_field_d, msk_d, m) &
           bind(c, name = 'hip_wall_model_compute_mag_field')
        use, intrinsic :: iso_c_binding, only : c_ptr, c_int
        implicit none
        type(c_ptr), value :: tau_x_d, tau_y_d, tau_z_d, tau_field_d, msk_d
        integer(c_int) :: m
-     end subroutine hip_wall_model_compute_mag_field
+     end subroutine hip_wall_model_compute_magtau_field
+     subroutine hip_wall_model_compute_q_field(q_d, &
+          q_field_d, msk_d, m) &
+          bind(c, name = 'hip_wall_model_compute_q_field')
+       use, intrinsic :: iso_c_binding, only : c_ptr, c_int
+       implicit none
+       type(c_ptr), value :: q_d, q_field_d, msk_d
+       integer(c_int) :: m
+     end subroutine hip_wall_model_compute_q_field
   end interface
 #elif HAVE_CUDA
   interface
-     subroutine cuda_wall_model_compute_mag_field(tau_x_d, tau_y_d, tau_z_d, &
+     subroutine cuda_wall_model_compute_magtau_field(tau_x_d, tau_y_d, tau_z_d, &
           tau_field_d, msk_d, m) &
           bind(c, name = 'cuda_wall_model_compute_mag_field')
        use, intrinsic :: iso_c_binding, only : c_ptr, c_int
        implicit none
        type(c_ptr), value :: tau_x_d, tau_y_d, tau_z_d, tau_field_d, msk_d
        integer(c_int) :: m
-     end subroutine cuda_wall_model_compute_mag_field
+     end subroutine cuda_wall_model_compute_magtau_field
+     subroutine hip_wall_model_compute_q_field(q_d, &
+          q_field_d, msk_d, m) &
+          bind(c, name = 'cuda_wall_model_compute_q_field')
+       use, intrinsic :: iso_c_binding, only : c_ptr, c_int
+       implicit none
+       type(c_ptr), value :: q_d, q_field_d, msk_d
+       integer(c_int) :: m
+     end subroutine hip_wall_model_compute_q_field
   end interface
 #elif HAVE_OPENCL
   interface
-     subroutine opencl_wall_model_compute_mag_field(tau_x_d, tau_y_d, tau_z_d, &
+     subroutine opencl_wall_model_compute_magtau_field(tau_x_d, tau_y_d, tau_z_d, &
           tau_field_d, msk_d, m) &
           bind(c, name = 'opencl_wall_model_compute_mag_field')
        use, intrinsic :: iso_c_binding, only : c_ptr, c_int
        implicit none
        type(c_ptr), value :: tau_x_d, tau_y_d, tau_z_d, tau_field_d, msk_d
        integer(c_int) :: m
-     end subroutine opencl_wall_model_compute_mag_field
+     end subroutine opencl_wall_model_compute_magtau_field
+     subroutine opencl_wall_model_compute_q_field(q_d, &
+          q_field_d, msk_d, m) &
+          bind(c, name = 'opencl_wall_model_compute_q_field')
+       use, intrinsic :: iso_c_binding, only : c_ptr, c_int
+       implicit none
+       type(c_ptr), value :: q_d, q_field_d, msk_d
+       integer(c_int) :: m
+     end subroutine opencl_wall_model_compute_q_field
   end interface
 #elif HAVE_METAL
   interface
-     subroutine metal_wall_model_compute_mag_field(tau_x_d, tau_y_d, tau_z_d, &
+     subroutine metal_wall_model_compute_magtau_field(tau_x_d, tau_y_d, tau_z_d, &
           tau_field_d, msk_d, m) &
           bind(c, name = 'metal_wall_model_compute_mag_field')
        use, intrinsic :: iso_c_binding, only : c_ptr, c_int
        implicit none
        type(c_ptr), value :: tau_x_d, tau_y_d, tau_z_d, tau_field_d, msk_d
        integer(c_int) :: m
-     end subroutine metal_wall_model_compute_mag_field
+     end subroutine metal_wall_model_compute_magtau_field
+     subroutine opencl_wall_model_compute_q_field(q_d, &
+          q_field_d, msk_d, m) &
+          bind(c, name = 'opencl_wall_model_compute_q_field')
+       use, intrinsic :: iso_c_binding, only : c_ptr, c_int
+       implicit none
+       type(c_ptr), value :: q_d, q_field_d, msk_d
+       integer(c_int) :: m
+     end subroutine opencl_wall_model_compute_q_field
   end interface
 #endif
-  public :: wall_model_compute_mag_field_device
+  public :: wall_model_compute_magtau_field_device
 
 contains
   !> Compute the wall shear stress's magnitude on device.
   !! @param t The time value.
   !! @param tstep The current time-step.
-  subroutine wall_model_compute_mag_field_device(tau_x_d, tau_y_d, tau_z_d, &
+  subroutine wall_model_compute_magtau_field_device(tau_x_d, tau_y_d, tau_z_d, &
        tau_field_d, msk_d, m)
     type(c_ptr), intent(in) :: tau_x_d, tau_y_d, tau_z_d
     type(c_ptr), intent(in) :: msk_d
@@ -112,5 +144,33 @@ contains
     call neko_error('No device backend configured')
 #endif
 
-  end subroutine wall_model_compute_mag_field_device
+  end subroutine wall_model_compute_magtau_field_device
+
+  !> Compute the heat flux magnitude on device.
+  !! @param t The time value.
+  !! @param tstep The current time-step.
+  subroutine wall_model_compute_q_field_device(q_d, &
+       q_field_d, msk_d, m)
+    type(c_ptr), intent(in) :: q_d
+    type(c_ptr), intent(in) :: msk_d
+    type(c_ptr), intent(inout) :: q_field_d
+    integer, intent(in) :: m
+
+#if HAVE_HIP
+    call hip_wall_model_compute_q_field(q_d, &
+         q_field_d, msk_d, m)
+#elif HAVE_CUDA
+    call cuda_wall_model_compute_q_field(q_d, &
+         q_field_d, msk_d, m)
+#elif HAVE_OPENCL
+    call opencl_wall_model_compute_q_field(q_d, &
+         q_field_d, msk_d, m)
+#elif HAVE_METAL
+    call metal_wall_model_compute_q_field(q_d, &
+         q_field_d, msk_d, m)
+#else
+    call neko_error('No device backend configured')
+#endif
+
+  end subroutine wall_model_compute_q_field_device
 end module wall_model_device

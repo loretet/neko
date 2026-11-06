@@ -48,7 +48,8 @@ module wall_model
   use user_intf, only : user_t
   use, intrinsic :: iso_c_binding, only : c_ptr, C_NULL_PTR
   use device, only : device_get_ptr
-  use wall_model_device, only : wall_model_compute_mag_field_device
+  use wall_model_device, only : wall_model_tau_field_device
+  use wall_model_device, only : wall_model_q_field_device
   use json_utils, only : json_get, json_get_or_lookup
   implicit none
   private
@@ -78,6 +79,8 @@ module wall_model
      type(vector_t) :: tau_y
      !> The z component of the shear stress.
      type(vector_t) :: tau_z
+     !> The scalar heat flux.
+     type(vector_t) :: q
      !> The x component of the normal.
      type(vector_t) :: n_x
      !> The y component of the normal.
@@ -90,6 +93,8 @@ module wall_model
      integer :: n_nodes = 0
      !> The 3D field with the computed stress magnitude at the boundary.
      type(field_t), pointer :: tau_field => null()
+     !> The 3D field with the computed heat flux magnitude at the boundary.
+     type(field_t), pointer :: q_field => null()
    contains
      !> Constructor for the wall_model_t (base) class.
      procedure, pass(this) :: init_base => wall_model_init_base
@@ -100,7 +105,11 @@ module wall_model
      !> Destructor for the wall_model_t (base) class.
      procedure, pass(this) :: free_base => wall_model_free_base
      !> Compute the wall shear stress's magnitude.
-     procedure, pass(this) :: compute_mag_field => wall_model_compute_mag_field
+     procedure, pass(this) :: compute_magtau_field => wall_model_compute_magtau_field
+      !> Compute the heat flux magnitude.
+     procedure, pass(this) :: compute_q_field => wall_model_compute_q_field
+     !> Compute the heat flux magnitude.
+     procedure, pass(this) :: compute_q_field => wall_model_compute_q_field
      !> The common constructor.
      procedure(wall_model_init), pass(this), deferred :: init
      !> A part of the constructor that parses the JSON without initializing the
@@ -290,6 +299,9 @@ contains
     call neko_registry%add_field(this%dof, "tau", &
          ignore_existing = .true.)
     this%tau_field => neko_registry%get_field("tau")
+    call neko_registry%add_field(this%dof, "q", &
+         ignore_existing = .true.)
+    this%q_field => neko_registry%get_field("q")      fix. correct to keep q or should I name it q_wm? (Maybe 'q' used elsewhere)
 
     call this%finalize_base(msk, facet)
   end subroutine wall_model_init_base
@@ -318,6 +330,9 @@ contains
     call neko_registry%add_field(this%dof, "tau", &
          ignore_existing = .true.)
     this%tau_field => neko_registry%get_field("tau")
+    call neko_registry%add_field(this%dof, "q", &
+         ignore_existing = .true.)
+    this%q_field => neko_registry%get_field("q")
   end subroutine wall_model_partial_init_base
 
   subroutine wall_model_finalize_base(this, msk, facet, bc_name, user)
@@ -334,6 +349,8 @@ contains
     call this%tau_x%init(this%msk(0))
     call this%tau_y%init(this%msk(0))
     call this%tau_z%init(this%msk(0))
+
+    call this%q%init(this%msk(0))
 
     call this%n_x%init(this%msk(0))
     call this%n_y%init(this%msk(0))
@@ -369,6 +386,7 @@ contains
     nullify(this%msk)
     nullify(this%facet)
     nullify(this%tau_field)
+    nullify(this%q_field)
     nullify(this%mu)
     nullify(this%rho)
     this%msk_d = C_NULL_PTR
@@ -376,6 +394,8 @@ contains
     call this%tau_x%free()
     call this%tau_y%free()
     call this%tau_z%free()
+
+    call this%q%free()
 
     if (allocated(this%sampler)) then
        call this%sampler%free()
@@ -436,7 +456,7 @@ contains
     end if
   end subroutine wall_model_validate_single_sample
 
-  subroutine wall_model_compute_mag_field(this)
+  subroutine wall_model_compute_magtau_field(this)
     class(wall_model_t), intent(inout) :: this
     integer :: i, m
     real(kind=rp) :: magtau
@@ -444,7 +464,7 @@ contains
     m = this%msk(0)
     if (m > 0) then
        if (NEKO_BCKND_DEVICE .eq. 1) then
-          call wall_model_compute_mag_field_device(this%tau_x%x_d, &
+          call wall_model_compute_magtau_field_device(this%tau_x%x_d, &
                this%tau_y%x_d, &
                this%tau_z%x_d, &
                this%tau_field%x_d, &
@@ -459,6 +479,26 @@ contains
        end if
     end if
 
-  end subroutine wall_model_compute_mag_field
+  end subroutine wall_model_compute_magtau_field
+
+  subroutine wall_model_compute_q_field(this)        fix. else branch probably useless?
+    class(wall_model_t), intent(inout) :: this
+    integer :: i, m
+    real(kind=rp) :: q
+
+    m = this%msk(0)
+    if (m > 0) then
+       if (NEKO_BCKND_DEVICE .eq. 1) then
+          call wall_model_compute_q_field_device(this%q%x_d, &
+               this%q_field%x_d, &
+               this%msk_d, m)
+       else
+          do i = 1, m
+             this%q_field%x(this%msk(i),1,1,1) = q
+          end do
+       end if
+    end if
+
+  end subroutine wall_model_compute_q_field
 
 end module wall_model
