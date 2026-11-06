@@ -83,7 +83,7 @@ module most
      !> The name of the temperature variable
      character(len=:), allocatable :: scalar_name
      !> Diagnostics
-     type(vector_t) :: Ri_b, L_ob, utau, magu, ti, ts, q
+     type(vector_t) :: Ri_b, L_ob, utau, magu, ti, ts
      !> Model-owned sampled fields and wall temperature.
      type(vector_t) :: u_s, v_s, w_s, temp_s, temp_w
    contains
@@ -243,7 +243,6 @@ contains
     call this%magu%init(this%n_nodes)
     call this%ti%init(this%n_nodes)
     call this%ts%init(this%n_nodes)
-    call this%q%init(this%n_nodes)
 
     call this%mu_w%init(this%n_nodes)
     call this%rho_w%init(this%n_nodes)
@@ -398,7 +397,6 @@ contains
     call this%magu%free()
     call this%ti%free()
     call this%ts%free()
-    call this%q%free()
 
   end subroutine most_free
 
