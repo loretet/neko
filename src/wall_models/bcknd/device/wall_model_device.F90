@@ -67,14 +67,14 @@ module wall_model_device
        type(c_ptr), value :: tau_x_d, tau_y_d, tau_z_d, tau_field_d, msk_d
        integer(c_int) :: m
      end subroutine cuda_wall_model_compute_magtau_field
-     subroutine hip_wall_model_compute_q_field(q_d, &
+     subroutine cuda_wall_model_compute_q_field(q_d, &
           q_field_d, msk_d, m) &
           bind(c, name = 'cuda_wall_model_compute_q_field')
        use, intrinsic :: iso_c_binding, only : c_ptr, c_int
        implicit none
        type(c_ptr), value :: q_d, q_field_d, msk_d
        integer(c_int) :: m
-     end subroutine hip_wall_model_compute_q_field
+     end subroutine cuda_wall_model_compute_q_field
   end interface
 #elif HAVE_OPENCL
   interface
@@ -105,17 +105,18 @@ module wall_model_device
        type(c_ptr), value :: tau_x_d, tau_y_d, tau_z_d, tau_field_d, msk_d
        integer(c_int) :: m
      end subroutine metal_wall_model_compute_magtau_field
-     subroutine opencl_wall_model_compute_q_field(q_d, &
+     subroutine metal_wall_model_compute_q_field(q_d, &
           q_field_d, msk_d, m) &
-          bind(c, name = 'opencl_wall_model_compute_q_field')
+          bind(c, name = 'metal_wall_model_compute_q_field')
        use, intrinsic :: iso_c_binding, only : c_ptr, c_int
        implicit none
        type(c_ptr), value :: q_d, q_field_d, msk_d
        integer(c_int) :: m
-     end subroutine opencl_wall_model_compute_q_field
+     end subroutine metal_wall_model_compute_q_field
   end interface
 #endif
   public :: wall_model_compute_magtau_field_device
+  public :: wall_model_compute_q_field_device
 
 contains
   !> Compute the wall shear stress's magnitude on device.
