@@ -479,7 +479,7 @@ contains
 
   end subroutine wall_model_compute_magtau_field
 
-  subroutine wall_model_compute_q_field(this)        ! fix. else branch probably useless?
+  subroutine wall_model_compute_q_field(this)        
     class(wall_model_t), intent(inout) :: this
     integer :: i, m
     real(kind=rp) :: q
@@ -492,7 +492,7 @@ contains
                this%msk_d, m)
        else
           do i = 1, m
-             this%q_field%x(this%msk(i),1,1,1) = q
+             this%q_field%x(this%msk(i),1,1,1) = this%q%x(i)
           end do
        end if
     end if
