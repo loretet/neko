@@ -303,6 +303,8 @@ contains
        case ("neumann")
           ! Compute u* with the new Obukhov length
           utau = kappa*magu/slaw_m_ptr(hi, L_ob, z0)
+          ! and assign q the bc_value given inthe case file
+          q = bc_value
        case ("dirichlet")
           ! Compute u* with the new Obukhov length
           utau = kappa*magu/slaw_m_ptr(hi, L_ob, z0)
