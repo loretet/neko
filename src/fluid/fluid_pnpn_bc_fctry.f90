@@ -563,9 +563,8 @@ contains
 
     select case (trim(type))
     case ("wall_model")
-       ! Kind of hack, but  OK for now
+       ! Kind of hack, but OK for now
        call json%add("scheme_name", scheme%name)
-
        select type (wall_bc => object)
        type is (wall_model_bc_t)
           wall_bc%user => user

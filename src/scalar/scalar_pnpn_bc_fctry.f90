@@ -40,18 +40,20 @@ submodule(scalar_pnpn) scalar_pnpn_bc_fctry
   use utils, only : neko_type_error, neko_type_registration_error
   use field_dirichlet, only : field_dirichlet_t
   use field_neumann, only : field_neumann_t
+  use wall_model_bc, only : wall_model_bc_t
   use expression_dirichlet, only : expression_dirichlet_t
   use overset_interface, only : overset_interface_t
   implicit none
 
   ! List of all possible types created by the boundary condition factories
-  character(len=25), parameter :: SCALAR_PNPN_KNOWN_BCS(6) = [ &
+  character(len=25), parameter :: SCALAR_PNPN_KNOWN_BCS(7) = [ &
        character(len=25) :: &
        "dirichlet", &
        "expression_dirichlet", &
        "user_dirichlet", &
        "user_neumann", &
        "neumann", &
+       "wall_model", &
        "overset_interface"]
 
 contains
@@ -80,6 +82,8 @@ contains
        allocate(field_neumann_t::object)
     case ("neumann")
        allocate(neumann_t::object)
+    case ("wall_model")
+       allocate(wall_model_bc_t::object)
     case ("overset_interface")
        allocate(overset_interface_t::object)
     case default
@@ -158,6 +162,13 @@ contains
     call scalar_pnpn_bc_allocator(object, type)
 
     select case (trim(type))
+    case ("wall_model")
+       ! Kind of hack, but OK for now (copied from fluid_pnpn_bc_fctry)
+       call json%add("scheme_name", scheme%s%name)
+       select type (wall_bc => object)
+       type is (wall_model_bc_t)
+          wall_bc%user => user
+       end select
     case ("user_dirichlet")
        select type (obj => object)
        type is (field_dirichlet_t)
