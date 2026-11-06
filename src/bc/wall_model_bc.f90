@@ -121,7 +121,7 @@ contains
        call this%wall_model%compute( real(time%t, kind=rp), time%tstep)
 
        ! Populate the 3D wall stress field for post-processing.
-       call this%wall_model%compute_mag_field()
+       call this%wall_model%compute_magtau_field()
 
        ! Set the computed stress for application by the underlying Neumann
        ! boundary conditions.
@@ -176,7 +176,7 @@ contains
        call this%wall_model%compute( real(time%t, kind=rp), time%tstep)
 
        ! Populate the 3D wall stress field for post-processing.
-       call this%wall_model%compute_mag_field()
+       call this%wall_model%compute_magtau_field()
 
        ! Set the computed stress for application by the underlying Neumann
        ! boundary conditions.
