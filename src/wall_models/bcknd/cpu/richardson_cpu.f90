@@ -95,6 +95,7 @@ contains
     select case (bc_type)
     case ("neumann")
        ! ts not used
+       ts = ti
        q = bc_value
     case ("dirichlet")
        ts = bc_value
@@ -200,8 +201,10 @@ contains
        utau = sqrt(tau_ptr(magu, Ri_b, hi, z0, l, kappa))
        select case (bc_type)
        case ("neumann")
-          !!! TEMPORARY: neutral log-law approximation
-          ts = ti - (q * Pr * log(hi/z0h)) / (max(utau, 1e-6_rp) * kappa)
+          ! Compute ts based on stability (C = flux per kelvin)
+          C = heat_flux_ptr(ti, ts, Ri_b, hi, magu, z0h, Pr, l, utau, kappa)
+          if (C < 1e-6) then C = 1e-6
+          ts = ti + q / C
           q = q
        case ("dirichlet")
           ! Compute q
@@ -296,7 +299,7 @@ contains
     b = 2.0
     c = 5.3 * a**2 * b * (h/z0h)**0.5
 
-    heat_flux = - a**2 / 0.74 * magu * &
+    heat_flux = - a**2 / Pr * magu * &
          (ti - ts) * f_theta_convective(Ri_b, c)
 
   end function heat_flux_convective
