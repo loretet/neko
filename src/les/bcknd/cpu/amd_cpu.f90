@@ -249,8 +249,8 @@ contains
           ! TODO: gt(2,1), gt(3,1), gt(3,2) (symmetry)
 
           ! ------------------------------------------------------------
-          ! TODO 5: strain-rate tensor S = (A + A^T) / 2 (one line, using
-          ! the Fortran intrinsic transpose).
+          ! TODO 5: strain-rate tensor (sr) S = (A + A^T) / 2 
+          ! In Fortran, A^T = transpose(A) 
           ! ------------------------------------------------------------
           sr = 0.0_rp   ! TODO
 
@@ -263,21 +263,21 @@ contains
           ! ------------------------------------------------------------
           do j = 1, 3
              do k = 1, 3
-                h(k,j) = 0.0_rp   ! TODO
+                h(k,j) = gt(k,1)*a(j,1) + ...   ! TODO
              end do
           end do
 
           do j = 1, 3
              do k = 1, 3
-                d(j,k) = 0.0_rp   ! TODO
+                d(j,k) = a(j,1)*h(1,k) + ...   ! TODO
              end do
           end do
 
           ! ------------------------------------------------------------
-          ! TODO 7: shear production  -D_ij S_ij  (double contraction: the
-          ! sum of the element-wise products of the two matrices) and the
-          ! denominator a_lm a_lm (sum of the squares of all nine a_ij).
-          ! Hint: the intrinsic sum() applied to a whole array.
+          ! TODO 7: shear production  -D_ij S_ij  (repreated indices ij ij mean
+          ! double contraction: the sum of the (element-wise) products of the 
+          ! two matrices) and the denominator a_lm a_lm (sum of the squares of a_ij).
+          ! Hint: the Fortran command sum() can be applied to a whole array.
           ! ------------------------------------------------------------
           shear_prod = 0.0_rp   ! TODO
           aijaij = 0.0_rp       ! TODO
@@ -300,7 +300,7 @@ contains
                 ! Careful: the sum runs over the FIRST index of a.
                 ! ------------------------------------------------------
                 do k = 1, 3
-                   bu(k) = 0.0_rp   ! TODO
+                   bu(k) = -( g(1)*a(1,k) + .... ) / ....   ! TODO
                 end do
 
                 ! ------------------------------------------------------
@@ -310,13 +310,18 @@ contains
                 !   gs_b(gravity_dir) = gs_b(gravity_dir)
                 !                       - mean_grad(map_g%pt_lvl(i,1,1,e))
                 ! ------------------------------------------------------
+
+                ! Gradient of the fluctuation s' = s - <s>
                 gs_b = gs
-                ! TODO: mean subtraction (inside an  if (if_mean_sub)  block)
+                if (if_mean_sub) then
+                   gs_b(gravity_dir) = gs_b(gravity_dir) &
+                        - mean_grad(map_g%pt_lvl(i,1,1,e))
+                end if
 
                 ! ------------------------------------------------------
                 ! TODO 10: buoyancy production
                 !   -g_i / T_ref (dk^ u_i)(dk^ s') = bu_a gt_ab gs_b(b)
-                ! Hint: matmul (matrix times vector) and dot_product.
+                ! Hint: use matmul (matrix times vector) and dot_product.
                 ! ------------------------------------------------------
                 buoy_prod = 0.0_rp   ! TODO
              end if
@@ -327,9 +332,9 @@ contains
              ! compute |grad s|^2.
              ! ---------------------------------------------------------
              do k = 1, 3
-                q(k) = 0.0_rp   ! TODO
+                q(k) = a(1,k)*gs(1) + ...   ! TODO
              end do
-             grad_s_sq = 0.0_rp   ! TODO
+             grad_s_sq = gs(1)**2 + ...   ! TODO
 
              ! ---------------------------------------------------------
              ! TODO 12: eddy diffusivity, Eq. (18):
