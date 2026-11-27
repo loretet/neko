@@ -835,6 +835,32 @@ keywords:
     - `TKE_source_field`: The field name of the source terms in the TKE equation
       including shear production, buoyancy contribution and dissipation,
       defaults to `TKE_source`.
+  - `amd`: The anisotropic minimum-dissipation (AMD) model of Rozema et al.
+    2015 (https://doi.org/10.1063/1.4928700), with the buoyancy extension of
+    Abkar and Moin 2017 (https://doi.org/10.1007/s10546-017-0288-4). The
+    products of scaled gradients use the same filter-width tensor as the
+    anisotropic Vreman model, so the model works for stretched and rotated
+    elements. Only the CPU backend is currently implemented. Configured by the
+    following additional keywords:
+    - `c`: The modified Poincaré constant, defaults to 1/12.
+    - `anisotropic`: Whether to use the direction-dependent filter widths
+      (see `anisotropic` for the Vreman model), defaults to `true`. With
+      `false`, the isotropic `les_delta` is used in all directions.
+    - `scalar_field`: If given, the eddy diffusivity of this scalar is also
+      computed. Select it in the scalar with an `alphat` object with
+      `nut_dependency` set to `false`.
+    - `alphat_field`: The name of the scalar eddy diffusivity field, defaults
+      to `temperature_alphat`.
+    - `buoyancy`: Whether to include the buoyancy term in the eddy viscosity,
+      defaults to `false`. Requires `scalar_field` and:
+      - `g`: The gravity vector, pointing in the direction of gravity, e.g.
+        `[0, 0, -9.81]`.
+      - `reference_temperature`: The reference temperature, the buoyancy
+        parameter is computed as `1/reference_temperature`.
+      - `subtract_horizontal_mean`: Whether to subtract the mean of the scalar
+        over planes normal to gravity in the buoyancy term, as in Abkar and
+        Moin 2017. Requires gravity aligned with a coordinate axis and a mesh
+        layered in that direction. Defaults to `true`.
 - `les_delta`: Selects the way to compute the LES filter length scale. Currently
   three alternatives are provided and the default one is `pointwise` if nothing
   is specified:

@@ -1,0 +1,58 @@
+{
+    "version": 1.0,
+    "case": {
+        "mesh_file": "box.nmsh",
+        "output_at_end": false,
+        "output_checkpoints": false,
+        "time": {
+            "end_time": 0.003,
+            "timestep": 0.001
+        },
+        "numerics": {
+            "time_order": 1,
+            "polynomial_order": 5,
+            "dealias": false
+        },
+        "fluid": {
+            "scheme": "pnpn",
+            "freeze": true,
+            "rho": 1.0,
+            "mu": 1e-5,
+            "output_control": "never",
+            "initial_condition": {"type": "user"},
+            "boundary_conditions": [
+                {"type": "outflow", "zone_indices": [1, 2, 3, 4, 5, 6]}
+            ],
+            "velocity_solver": {"type": "cg", "preconditioner": {"type": "jacobi"},
+                                "absolute_tolerance": 1e-8},
+            "pressure_solver": {"type": "gmres", "preconditioner": {"type": "hsmg"},
+                                "absolute_tolerance": 1e-6}
+        },
+        "scalars": [
+            {
+                "name": "temperature",
+                "freeze": true,
+                "cp": 1.0,
+                "lambda": 1e-5,
+                "initial_condition": {"type": "user"},
+                "boundary_conditions": [
+                    {"type": "neumann", "flux": 0.0, "zone_indices": [1, 2, 3, 4, 5, 6]}
+                ],
+                "alphat": {"nut_dependency": false, "alphat_field": "temperature_alphat"},
+                "solver": {"type": "cg", "preconditioner": {"type": "jacobi"},
+                           "absolute_tolerance": 1e-8}
+            }
+        ],
+        "simulation_components": [
+            {
+                "type": "les_model",
+                "model": "amd",
+                "scalar_field": "temperature",
+                "buoyancy": true,
+                "g": [0.0, 0.0, -9.81],
+                "reference_temperature": 300.0,
+                "output_control": "never"
+            }
+        ]
+    }
+}

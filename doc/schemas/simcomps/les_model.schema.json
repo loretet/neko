@@ -122,6 +122,60 @@
                 },
                 {
                   "type": "object",
+                  "properties": {
+                    "model": {
+                      "const": "amd"
+                    },
+                    "c": {
+                      "$ref": "urn:neko:schema:simulation-components#/$defs/numberOrRef"
+                    },
+                    "anisotropic": {
+                      "type": "boolean"
+                    },
+                    "scalar_field": {
+                      "$ref": "urn:neko:schema:simulation-components#/$defs/nonEmptyString"
+                    },
+                    "alphat_field": {
+                      "$ref": "urn:neko:schema:simulation-components#/$defs/nonEmptyString"
+                    },
+                    "buoyancy": {
+                      "type": "boolean"
+                    },
+                    "g": {
+                      "$ref": "urn:neko:schema:simulation-components#/$defs/vector3OrRef"
+                    },
+                    "reference_temperature": {
+                      "$ref": "urn:neko:schema:common#/$defs/positiveNumberOrRef"
+                    },
+                    "subtract_horizontal_mean": {
+                      "type": "boolean"
+                    }
+                  },
+                  "allOf": [
+                    {
+                      "if": {
+                        "properties": {
+                          "buoyancy": {
+                            "const": true
+                          }
+                        },
+                        "required": [
+                          "buoyancy"
+                        ]
+                      },
+                      "then": {
+                        "required": [
+                          "scalar_field",
+                          "reference_temperature",
+                          "g"
+                        ]
+                      }
+                    }
+                  ],
+                  "additionalProperties": true
+                },
+                {
+                  "type": "object",
                   "required": [
                     "T0",
                     "g"
